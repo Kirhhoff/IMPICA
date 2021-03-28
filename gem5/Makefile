@@ -11,9 +11,9 @@ run: ${gem5-cli}
 		--mem-size=2048MB \
     	--disk-image=aarch64-ubuntu-trusty-headless.img \
     	--dtb-file=vexpress.aarch64.20140821.dtb \
-	    --kernel=vmlinux.aarch64.20140821
+		--kernel=vmlinux
+	    # --kernel=vmlinux.aarch64.20140821
     	# --disk-type=f    	
-		# --kernel=vmlinux
 
 clean:
 	rm -rf build
