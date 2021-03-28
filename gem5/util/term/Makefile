@@ -41,3 +41,6 @@ clean:
 	@rm -f m5term *~ .#*
 
 .PHONY: clean
+
+connect: m5term
+	./m5term localhost 3456

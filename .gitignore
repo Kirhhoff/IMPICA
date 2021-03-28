@@ -1,0 +1,10 @@
+gem5/build
+gem5/m5out
+gem5/util/term/m5term
+gem5/a.out
+gem5/parsetab.py
+*.pyc
+
+obj/
+pim_lib/libpim.a
+pim_lib/test_code
