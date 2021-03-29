@@ -14,6 +14,60 @@ pim_driver: The Linux kernel driver for IMPICA.
 
 workloads: The evaluated workloads.
 
+## Run lab with docker in a few commands
+Suppose you have cloned this repository to your host, you can simply run the following command under root directory:
+```
+sudo docker-compose run gem5-lab
+```
+and docker will:
+1. pull image from docker hub
+2. create and run a container from the image
+3. spawn a bash
+
+and you may find yourself under container /home directory:
+```
+root@98ce37a6bcd0:/home# ls
+IMPICA  aarch-system-2014-10
+```
+where IMPICA is mapped onto your host repository.
+
+Check into IMPICA and run:
+```
+cd IMPICA
+make run
+``` 
+in a word _make_ will:
+1. cross-compile linux kernel if it has not been compiled
+2. build pim driver if it has not been built
+3. build pim lib if it has not been built
+4. compile gem5 if it has not been compiled
+5. run pim-equipped kernel on gem5
+
+As cross-compiler and gem5 disk image(under /home/aarch-system-2014-10/disks) has been built into docker image, you don't have to worry about them. Compiling kernel and gem5 may spends an hour or less for the first time.
+
+After gem5 has run, you may want to attach a terminal to it, this may be achieved in two steps:
+1. attach another bash to running docker container
+2. attach a terminal to gem5 within the container
+
+you may run:
+```
+# step 1: 
+#   Before attaching another bash to the container, you have to
+#   first find out its id. Use "docker container ls".
+sudo docker container ls
+sudo docker exec -it [container-id] bash
+
+# step 2:
+#   Now we are under /home, check into IMPICA and use "make"
+#   to connect to gem5.
+cd IMPICA
+make connect
+```
+All control scripts are listed here:
+- **Dockerfile**: you may change it if you want to DIY docker image
+- **docker-compose.yml**: you may change it if you want to DIY container
+- **Makefile**: automate build/run of the whole project
+- **Makefiles under subdirectories**: control builds of different modules
 ## System prerequisites
 
 The system needs to be able to build gem5 and the Linux kernel for ARM. Please refer to:
