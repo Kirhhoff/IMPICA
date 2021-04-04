@@ -12,7 +12,7 @@ run: ${kern-img}
 ${kern-img}:
 	make -C ${kern-dir} ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
 	make -C ${kern-dir} ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- dep
-	make -C ${kern-dir} ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j1
+	make -C ${kern-dir} ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j17
 	cp ${kern-bin} ${kern-img}
 
 connect:
