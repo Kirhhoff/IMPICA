@@ -6,5 +6,6 @@ gem5/parsetab.py
 *.pyc
 
 obj/
+bin/
 pim_lib/libpim.a
 pim_lib/test_code
