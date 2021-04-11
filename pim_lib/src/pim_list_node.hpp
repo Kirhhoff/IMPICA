@@ -4,12 +4,12 @@
 #include <new>
 #include "pim_defs.h"
 #include "pim_syscall.h"
-#include "default_page_manager.h"
+#include "default_page_manager.hpp"
 #include <cstdio>
 
 template<typename T,
     class syscall_type = system_syscall,
-    class page_manager_impl = default_page_manager>
+    class page_manager_impl = default_page_manager<system_syscall>>
 class pim_list_node {
 
 protected:

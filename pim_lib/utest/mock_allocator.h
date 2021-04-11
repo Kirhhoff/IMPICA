@@ -9,3 +9,5 @@ public:
 };
 
 void* pim_allocate(psize_t size, mock_tag tag);
+int pim_mlock(void* addr, psize_t len, mock_tag tag);
+ptr_t va2pa(ptr_t, mock_tag);

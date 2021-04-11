@@ -1,5 +1,5 @@
-#include "pim_list_node.hpp"
 #include "mock_allocator.h"
+#include "pim_list_node.hpp"
 #include "mock_page_manager.h"
 #include <gtest/gtest.h>
 
@@ -73,47 +73,56 @@ TEST(BasicTests, OperatorNewOverload) {
     ASSERT_EQ(tester->vthis(), (ptr_t)tester);
 }
 
-mock_page_manager mock_page_manager::instance;
-using testing::_;
-using testing::Return;
+// mock_page_manager mock_page_manager::instance;
+// using testing::_;
+// using testing::Return;
 
-TEST(BasicTests, PageManager) {
-    EXPECT_CALL(mock_page_manager::instance, query_and_lock(_))
-        .WillRepeatedly(Return(0xABCDABCD));
-    pim_list_node<int, system_syscall, mock_page_manager> t;
-    mock_page_manager::instance.~mock_page_manager();    
+// TEST(BasicTests, PageManager) {
+//     EXPECT_CALL(mock_page_manager::instance, query_and_lock(_))
+//         .WillRepeatedly(Return(0xABCDABCD));
+//     pim_list_node<int, system_syscall, mock_page_manager> t;
+//     mock_page_manager::instance.~mock_page_manager();    
+// }
+
+#include <unordered_set>
+using std::unordered_set;
+class MockLockRecorder {
+    
+};
+
+int pim_mlock(void* addr, psize_t len, mock_tag) {
+
 }
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-
-ptr_t va2pa(ptr_t, mock_tag tag) {
-    pid_t pid = getpid();
-    printf("pid: %d\n", pid);
-    char filename[64];
-    snprintf(filename, sizeof(filename), "/proc/%d/pagemap", pid);
-    int fd;
-    fd = open(filename, O_RDONLY);
-    printf("fd: %d\n", fd);
-    ptr_t addr = ((ptr_t)(&pid) & ~(PAGE_SIZE - 1));
-    ptr_t off = addr / PAGE_SIZE * 8;
-    uint64_t entry;
-    int res;
-    res = mlock((void*)addr, PAGE_SIZE);
-    printf("lock res: %d\n", res);
-    res = pread(fd, &entry, sizeof(entry), off);
-    printf("&pid = 0x%lx, addr = 0x%lx off = 0x%lx\n", &pid, addr, off);
-    printf("read res: %d\n", res);
-    printf("entry: 0x%lx\n", entry);
-    printf("pfn: 0x%lx\n", (entry & ((1 << 55) - 1)));
-    printf("P: 0x%lx\n", entry >> 63);
-
-    // pread()
+ptr_t va2pa(ptr_t addr, mock_tag tag) {
+    // recorder;
+    return 0xCDABABCD;
 }
+
+TEST(BasicTests, PageManagerLock) {
+    auto& pm = default_page_manager<mock_syscall>::instance;
+
+    ptr_t va1 = 0x1000;
+    ptr_t va2 = 0x2000;
+    ptr_t va3 = 0x1008;
+    
+    pm.query_and_lock(va1);
+
+    pm.query_and_lock(va2);
+
+    pm.query_and_lock(va3);
+
+    pm.release(va1);
+
+    pm.release(va2);
+
+    pm.release(va3);
+}
+
 
 int main(int argc, char** argv) {
-    va2pa(0,mock_tag());
+    pim_list_node<int, system_syscall, default_page_manager<mock_syscall>> t;
+    printf("va: 0x%lx pa: 0x%lx\n", (ptr_t)&argc, va2pa((ptr_t)&argc,mock_tag()));
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
