@@ -8,9 +8,7 @@ template<typename T,
     class syscall_type = system_syscall,
     class page_manager_impl = default_page_manager<syscall_type>>
 class pim_list_node {
-
 protected:
-    
     static constexpr psize_t T_size = sizeof(T);
     static constexpr psize_t chunk_size = sizeof(chunk_t);
     static constexpr psize_t n_T_ptr = (T_size + PTR_SIZE - 1) / PTR_SIZE;
@@ -34,7 +32,6 @@ protected:
     chunk_t mem[n_chunk];    
 
 protected:
-
     ptr_t& pthis(psize_t idx) {
         return mem[IDX_META + idx];
     }
@@ -48,7 +45,9 @@ protected:
     }
 
 public:
-    pim_list_node();
+    template<typename... Args>
+    pim_list_node(Args&&... args);
+
     ~pim_list_node();
 
     typedef typename syscall_trait<syscall_type>::type_tag type_tag;
@@ -86,11 +85,12 @@ template<typename T, class syscall_type, class page_manager_impl>
 page_manager<page_manager_impl>& pim_list_node<T, syscall_type, page_manager_impl>::pm = page_manager_impl::instance;
 
 template<typename T, class syscall_type, class page_manager_impl>
-pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(){
+template<typename... Args>
+pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(Args&&... args){
     ptr_t vthis = reinterpret_cast<ptr_t>(mem);
     ptr_t vend = vthis + pim_size - chunk_size;
     psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
-    
+
     if(expage == 0) {
         pthis(0) = pm.query_and_lock(vthis);
     } else {
@@ -107,8 +107,12 @@ pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(){
             pthis(idx - 1) &= ~PIM_CROSS_PAGE;
         }
     }
+    
     pnext() = 0;
     vnext() = 0;
+    
+    new(reinterpret_cast<T*>(&mem[IDX_DATA_BEGIN])) 
+        T(std::forward<Args>(args)...);
 }
 
 template<typename T, class syscall_type, class page_manager_impl>
@@ -116,11 +120,14 @@ pim_list_node<T, syscall_type, page_manager_impl>::~pim_list_node(){
     ptr_t vthis = reinterpret_cast<ptr_t>(mem);
     ptr_t vend = vthis + pim_size - chunk_size;
     psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
+
     vthis &= ~PAGE_MASK;
     do {
         pm.release(vthis);
         vthis += PAGE_SIZE;
     } while(expage-- > 0);
+
+    reinterpret_cast<T*>(&mem[IDX_DATA_BEGIN])->~T();
 }
 
 #endif

@@ -261,6 +261,34 @@ TEST(PimListNodeTests, ConstructorDestructor) {
     ASSERT_TRUE(map.empty());
 }
 
+struct CtorMock{
+    CtorMock(ptr_t f1, ptr_t f2, ptr_t f3, ptr_t f4, ptr_t f5)
+        : field1(f1), field2(f2), field3(f3), field4(f4), field5(f5)
+        { }
+    ptr_t field1;
+    ptr_t field2;
+    ptr_t field3;
+    ptr_t field4;
+    ptr_t field5;
+    bool operator==(const CtorMock& obj) const{
+        return field1 == obj.field1 &&
+            field2 == obj.field2 &&
+            field3 == obj.field3 &&
+            field4 == obj.field4 &&
+            field5 == obj.field5;
+    }
+};
+
+
+TEST(PimListNodeTests, ConstructorForward) {
+    pim_list_node<CtorMock> stack_node(1, 2, 3, 4, 5);
+    ASSERT_EQ(stack_node.data(), CtorMock(1, 2, 3, 4, 5));
+
+    auto* heap_node = new pim_list_node<CtorMock>(1, 2, 3, 4, 5); 
+    ASSERT_EQ(heap_node->data(), CtorMock(1, 2, 3, 4, 5));
+    delete heap_node;
+}
+
 int main(int argc, char** argv) {
     // auto* t1 = new pim_list_node<mock_data<1>>;
     // auto* t2 = new pim_list_node<mock_data<512>>;
