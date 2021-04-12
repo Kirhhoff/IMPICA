@@ -2,9 +2,9 @@
 #define DEFAULT_PAGE_MANAGER_HPP
 
 #include <unordered_map>
-#include "page_manager.hpp"
+#include <cassert>
 #include "pim_syscall.h"
-#include <cstdio>
+#include "page_manager.hpp"
 
 using std::unordered_map;
 

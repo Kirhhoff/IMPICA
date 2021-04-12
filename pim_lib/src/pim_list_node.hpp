@@ -2,14 +2,11 @@
 #define PIM_LIST_NODE_HPP
 
 #include <new>
-#include "pim_defs.h"
-#include "pim_syscall.h"
 #include "default_page_manager.hpp"
-#include <cstdio>
 
 template<typename T,
     class syscall_type = system_syscall,
-    class page_manager_impl = default_page_manager<system_syscall>>
+    class page_manager_impl = default_page_manager<syscall_type>>
 class pim_list_node {
 
 protected:
@@ -51,44 +48,8 @@ protected:
     }
 
 public:
-    #define Continu 0x1
-
-    pim_list_node(){
-        ptr_t vthis = reinterpret_cast<ptr_t>(mem);
-        ptr_t vend = vthis + pim_size - chunk_size;
-        psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
-        
-        if(expage == 0) {
-            pthis(0) = pm.query_and_lock(vthis);
-        } else {
-            pthis(0) = pm.query_and_lock(vthis) | PIM_CROSS_PAGE;
-            if constexpr (n_pim_meta_ptr == 2) {
-                pthis(1) = pm.query_and_lock(vend & ~PAGE_MASK);
-            } else {
-                ptr_t idx = 1;
-                ptr_t vpn = ((vthis >> PAGE_SHIFT) + 1);
-                while (expage-- > 0) {
-                    pthis(idx++) = pm.query_and_lock(vpn << PAGE_SHIFT) | PIM_CROSS_PAGE; // q(vpn << PAGE_SIZE)
-                    vpn++;
-                }
-                pthis(idx - 1) &= ~PIM_CROSS_PAGE;
-            }
-        }
-        pnext() = 0;
-        vnext() = 0;
-    }
-
-    // TODO
-    ~pim_list_node(){
-        ptr_t vthis = reinterpret_cast<ptr_t>(mem);
-        ptr_t vend = vthis + pim_size - chunk_size;
-        psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
-        vthis &= ~PAGE_MASK;
-        do {
-            pm.release(vthis);
-            vthis += PAGE_SIZE;
-        } while(expage-- > 0);
-    }
+    pim_list_node();
+    ~pim_list_node();
 
     typedef typename syscall_trait<syscall_type>::type_tag type_tag;
     static void* operator new(psize_t count) {
@@ -123,5 +84,43 @@ public:
 
 template<typename T, class syscall_type, class page_manager_impl>
 page_manager<page_manager_impl>& pim_list_node<T, syscall_type, page_manager_impl>::pm = page_manager_impl::instance;
+
+template<typename T, class syscall_type, class page_manager_impl>
+pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(){
+    ptr_t vthis = reinterpret_cast<ptr_t>(mem);
+    ptr_t vend = vthis + pim_size - chunk_size;
+    psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
+    
+    if(expage == 0) {
+        pthis(0) = pm.query_and_lock(vthis);
+    } else {
+        pthis(0) = pm.query_and_lock(vthis) | PIM_CROSS_PAGE;
+        if constexpr (n_pim_meta_ptr == 2) {
+            pthis(1) = pm.query_and_lock(vend & ~PAGE_MASK);
+        } else {
+            ptr_t idx = 1;
+            ptr_t vpn = ((vthis >> PAGE_SHIFT) + 1);
+            while (expage-- > 0) {
+                pthis(idx++) = pm.query_and_lock(vpn << PAGE_SHIFT) | PIM_CROSS_PAGE; // q(vpn << PAGE_SIZE)
+                vpn++;
+            }
+            pthis(idx - 1) &= ~PIM_CROSS_PAGE;
+        }
+    }
+    pnext() = 0;
+    vnext() = 0;
+}
+
+template<typename T, class syscall_type, class page_manager_impl>
+pim_list_node<T, syscall_type, page_manager_impl>::~pim_list_node(){
+    ptr_t vthis = reinterpret_cast<ptr_t>(mem);
+    ptr_t vend = vthis + pim_size - chunk_size;
+    psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
+    vthis &= ~PAGE_MASK;
+    do {
+        pm.release(vthis);
+        vthis += PAGE_SIZE;
+    } while(expage-- > 0);
+}
 
 #endif

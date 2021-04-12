@@ -10,7 +10,6 @@ struct system_syscall{
 };
 
 class PimThreadContext {
-
 private:
     PimThreadContext();
 
