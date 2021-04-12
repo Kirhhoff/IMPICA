@@ -26,6 +26,7 @@
         "cstdint": "cpp",
         "deque": "cpp",
         "unordered_map": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "cerrno": "cpp"
     }
 }

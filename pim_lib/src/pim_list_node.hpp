@@ -50,34 +50,55 @@ protected:
         return mem[IDX_VNEXT];
     }
 
-    static void* operator new(psize_t count) {
-        typedef typename syscall_trait<syscall_type>::type_tag type_tag;
-        ptr_t* mem = static_cast<ptr_t*>(pim_allocate(count, type_tag()));
-        mem[0] = reinterpret_cast<ptr_t>(mem);
-        return mem;
-    }
-
 public:
+    #define Continu 0x1
 
-    // TODO: deal with pthis
     pim_list_node(){
-        ptr_t vthis = pthis(0), vend = pthis(0) + pim_size - chunk_size;
+        ptr_t vthis = reinterpret_cast<ptr_t>(mem);
+        ptr_t vend = vthis + pim_size - chunk_size;
         psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
-        printf("from pm : %lx\n", pm.query_and_lock(0)); 
+        
         if(expage == 0) {
-            // pthis(0) = ;
+            pthis(0) = pm.query_and_lock(vthis);
         } else {
-            // ptr_t idx = 1;
-            // ptr_t vpn = (vthis >> PAGE_SIZE + 1);
-            // while (expage-- > 0) {
-            //     pthis(idx++) = ; // q(vpn << PAGE_SIZE)
-            //     vpn++;
-            // }
+            pthis(0) = pm.query_and_lock(vthis) | PIM_CROSS_PAGE;
+            if constexpr (n_pim_meta_ptr == 2) {
+                pthis(1) = pm.query_and_lock(vend & ~PAGE_MASK);
+            } else {
+                ptr_t idx = 1;
+                ptr_t vpn = ((vthis >> PAGE_SHIFT) + 1);
+                while (expage-- > 0) {
+                    pthis(idx++) = pm.query_and_lock(vpn << PAGE_SHIFT) | PIM_CROSS_PAGE; // q(vpn << PAGE_SIZE)
+                    vpn++;
+                }
+                pthis(idx - 1) &= ~PIM_CROSS_PAGE;
+            }
         }
         pnext() = 0;
         vnext() = 0;
     }
 
+    // TODO
+    ~pim_list_node(){
+        ptr_t vthis = reinterpret_cast<ptr_t>(mem);
+        ptr_t vend = vthis + pim_size - chunk_size;
+        psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
+        vthis &= ~PAGE_MASK;
+        do {
+            pm.release(vthis);
+            vthis += PAGE_SIZE;
+        } while(expage-- > 0);
+    }
+
+    typedef typename syscall_trait<syscall_type>::type_tag type_tag;
+    static void* operator new(psize_t count) {
+        return pim_malloc(count, type_tag());
+    }
+
+    static void operator delete(void* ptr) {
+        pim_free(ptr, type_tag());
+    }
+    
     T& data(){
         return *(reinterpret_cast<T*>(&mem[IDX_DATA_BEGIN]));
     }

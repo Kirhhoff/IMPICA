@@ -1,1 +1,0 @@
-g++ -c utest/test.cpp -o obj/utest/test.o -Isrc -lgtest -lgmock -pthread

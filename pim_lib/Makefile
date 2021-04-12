@@ -19,6 +19,7 @@ pim-lib-targets := $(basename $(notdir $(shell ls ${src-dir}/*.cpp)))
 pim-lib-objs := $(addprefix ${obj-dir}/${src-dir}/, $(addsuffix .o, ${pim-lib-targets}))
 
 pim-x86-lib-objs := $(addprefix ${obj-dir}/${x86-src-dir}/, $(addsuffix .o, ${pim-lib-targets}))
+pim-utest-includes := $(shell ls ${utest-dir}/*.h)
 pim-utest-targets := $(basename $(notdir $(shell ls ${utest-dir}/*.cpp)))
 pim-utest-bin := $(addprefix ${bin-dir}/${utest-dir}/, ${pim-utest-targets}) 
 pim-utest-objs := $(addprefix ${obj-dir}/${utest-dir}/, $(addsuffix .o, ${pim-utest-targets}))
@@ -34,7 +35,7 @@ utest: ${pim-utest-objs}
 
 ${pim-utest-objs}: | ${bin-dir}/${utest-dir} ${obj-dir}/${utest-dir}
 
-${obj-dir}/${utest-dir}/%.o: ${utest-dir}/%.cpp  ${pim-x86-lib-objs} 
+${obj-dir}/${utest-dir}/%.o: ${utest-dir}/%.cpp ${pim-utest-includes} ${pim-x86-lib-objs} 
 	${GCC} ${GCCFLAGS} -c $< -o $@ -I${src-dir} ${GCCLIB}
 	${GCC} ${GCCFLAGS} -o ${bin-dir}/${utest-dir}/$(basename $(notdir $@)) $@ ${pim-x86-lib-objs} ${GCCLIB}
 

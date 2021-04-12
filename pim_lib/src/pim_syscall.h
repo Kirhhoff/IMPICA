@@ -9,8 +9,20 @@ struct system_syscall{
     typedef system_tag type_tag;
 };
 
-void* pim_allocate(psize_t size, system_tag tag);
+class PimThreadContext {
+
+private:
+    PimThreadContext();
+
+public:
+    static const PimThreadContext ctx;
+    int ptable_fd;
+};
+
+void* pim_malloc(psize_t size, system_tag tag);
+void pim_free(void* ptr, system_tag tag);
 int pim_mlock(void* addr, psize_t len, system_tag tag);
+int pim_munlock(void* addr, psize_t len, system_tag tag);
 ptr_t va2pa(ptr_t va, system_tag tag);
 
 #endif

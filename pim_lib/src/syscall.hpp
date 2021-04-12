@@ -9,10 +9,16 @@ struct syscall_trait {
 };
 
 template<typename syscall_tag_type>
-void* pim_allocate(psize_t size, syscall_tag_type tag);
+void* pim_malloc(psize_t size, syscall_tag_type tag);
+
+template<typename syscall_tag_type>
+void pim_free(void* ptr, syscall_tag_type tag); 
 
 template<typename syscall_tag_type>
 int pim_mlock(void* addr, psize_t len, syscall_tag_type tag);
+
+template<typename syscall_tage_type>
+int pim_munlock(void* addr, psize_t len, syscall_tage_type tag);
 
 template<typename syscall_tag_type>
 ptr_t va2pa(ptr_t va, syscall_tag_type tag);

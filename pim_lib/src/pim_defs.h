@@ -9,6 +9,10 @@ typedef ptr_t chunk_t;
 
 constexpr psize_t PAGE_SHIFT = 12;
 constexpr psize_t PAGE_SIZE = 1 << PAGE_SHIFT;
+constexpr psize_t PAGE_MASK = PAGE_SIZE - 1;
+
+constexpr ptr_t PIM_CROSS_PAGE_SHIFT = 0;
+constexpr ptr_t PIM_CROSS_PAGE = 1 << PIM_CROSS_PAGE_SHIFT;
 
 constexpr psize_t PTR_SIZE = sizeof(ptr_t);
 constexpr psize_t N_PTR_PER_PAGE = PAGE_SIZE / PTR_SIZE;
