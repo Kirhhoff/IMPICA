@@ -27,6 +27,8 @@
         "deque": "cpp",
         "unordered_map": "cpp",
         "sstream": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "istream": "cpp",
+        "streambuf": "cpp"
     }
 }
