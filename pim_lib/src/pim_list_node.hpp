@@ -18,7 +18,7 @@ protected:
     static constexpr psize_t n_chunk = n_pim_meta_ptr + n_pim_link_ptr + n_T_ptr;
     static constexpr psize_t pim_size = n_chunk * chunk_size;
 
-    using node = pim_list_node<T, syscall_type>;
+    using node = pim_list_node<T, syscall_type, page_manager_impl>;
 
     static page_manager<page_manager_impl>& pm;
 
@@ -65,15 +65,19 @@ public:
         return *(reinterpret_cast<T*>(&mem[IDX_DATA_BEGIN]));
     }
 
-    // TODO
-    template<class E>
-    void next(pim_list_node<E>* __next){
-    
+    template<class E, class Esyscall_type, class Epage_manager_impl>
+    void next(pim_list_node<E, Esyscall_type, Epage_manager_impl>* __next){
+        pnext() = reinterpret_cast<ptr_t>(__next->pthis(0));
+        vnext() = reinterpret_cast<ptr_t>(__next);
     }
 
-    // TODO
+    void clear_next() {
+        pnext() = 0;
+        vnext() = 0;   
+    }
+
     node* next(){
-        return nullptr;
+        return reinterpret_cast<node*>(vnext());
     }    
 
     // TODO
