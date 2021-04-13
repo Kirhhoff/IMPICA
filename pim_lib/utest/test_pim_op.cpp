@@ -4,6 +4,7 @@
 #include "mock_syscall.h"
 
 constexpr ptr_t va2pa_offset = 0x100000000000;
+constexpr ptr_t BUFF_SIZE = PAGE_SIZE;
 
 class fake_page_manager : public page_manager<fake_page_manager> {
 public:
@@ -13,9 +14,7 @@ public:
         return vaddr + va2pa_offset;
     }
 
-    void release(ptr_t vaddr) {
-
-    }
+    void release(ptr_t vaddr) { }
 };
 
 template<typename T>
@@ -23,12 +22,13 @@ class mnode : public pim_list_node<T, mock_syscall, fake_page_manager> {
 public:
     using Base = pim_list_node<T, mock_syscall, fake_page_manager>;
 
+    constexpr static psize_t T_size = Base::T_size;
+    
     template<typename... Args>
     mnode(Args... arg)
         :Base(arg...) 
         { }
 
-    constexpr static psize_t T_size = Base::T_size;
     ptr_t pnext() { return Base::pnext(); }
 
     ptr_t pthis(ptr_t idx) { return Base::pthis(idx); }
@@ -49,6 +49,18 @@ public:
         return vpn(0) != vpn(Base::IDX_DATA_BEGIN - 1);
     }
 
+};
+
+struct RepeatData {
+
+    ptr_t r[8];
+    
+    RepeatData(unsigned char c) {
+        r[0] = c;
+        for (int i = 1; i < 8; i++) {
+            r[i] = (r[i - 1] << 8) | c;
+        }
+    }
 };
 
 fake_page_manager fake_page_manager::instance;
@@ -93,16 +105,15 @@ ptr_t min(ptr_t v1, ptr_t v2) {
     return v1 < v2 ? v1 : v2;
 }
 
-#define BUFF_SIZE PAGE_SIZE
-
 ptr_t mock_pim_device_find(ptr_t pthis, ptr_t ptarget, ptr_t vthis, psize_t total) {
-    total += 3 * PTR_SIZE;
-    assert(total < BUFF_SIZE);
+
     ptr_t buff[PAGE_SIZE], cbuff[PAGE_SIZE];
     bool header_read_finished;
     ptr_t header_read_pos, header_cnt;
     ptr_t pread, readlen, cmp_pos, end_pos;
     psize_t size, ext;
+
+    total += 3 * PTR_SIZE;
 
     // readin buff
     ext = 0;
@@ -216,15 +227,6 @@ next:
 
     return 0;
 }
-struct RepeatData {
-    ptr_t r[8];
-    RepeatData(unsigned char c) {
-        r[0] = c;
-        for (int i = 1; i < 8; i++) {
-            r[i] = (r[i - 1] << 8) | c;
-        }
-    }
-};
 
 template<typename T>
 mnode<T>* mock_pim_find(mnode<T>* begin, T& val) {
@@ -235,7 +237,7 @@ mnode<T>* mock_pim_find(mnode<T>* begin, T& val) {
         reinterpret_cast<ptr_t>(begin), sizeof(T)));
 }
 
-TEST(PimListNodeTests, Linking) {
+TEST(PimListNodeTests, LinkAndFind) {
     mstart = reinterpret_cast<ptr_t>(mmap(0, PAGE_SIZE * 3,
         PROT_READ | PROT_WRITE,
         MAP_PRIVATE | MAP_ANONYMOUS,
