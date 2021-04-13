@@ -24,8 +24,9 @@ protected:
 
     enum {
         IDX_META = 0,
-        IDX_PNEXT = n_pim_meta_ptr,
+        IDX_PNEXT = n_pim_meta_ptr - 1,
         IDX_VNEXT,
+        IDX_PTHIS0,
         IDX_DATA_BEGIN
     };
 
@@ -33,7 +34,8 @@ protected:
 
 protected:
     ptr_t& pthis(psize_t idx) {
-        return mem[IDX_META + idx];
+        assert(idx < n_pim_meta_ptr);
+        return idx == 0 ? mem[IDX_PTHIS0] : mem[IDX_META + idx - 1];
     }
 
     ptr_t& pnext() {
@@ -89,25 +91,27 @@ template<typename... Args>
 pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(Args&&... args){
     ptr_t vthis = reinterpret_cast<ptr_t>(mem);
     ptr_t vend = vthis + pim_size - chunk_size;
-    psize_t expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
-
-    if(expage == 0) {
-        pthis(0) = pm.query_and_lock(vthis);
-    } else {
-        pthis(0) = pm.query_and_lock(vthis) | PIM_CROSS_PAGE;
-        if constexpr (n_pim_meta_ptr == 2) {
-            pthis(1) = pm.query_and_lock(vend & ~PAGE_MASK);
-        } else {
-            ptr_t idx = 1;
-            ptr_t vpn = ((vthis >> PAGE_SHIFT) + 1);
-            while (expage-- > 0) {
-                pthis(idx++) = pm.query_and_lock(vpn << PAGE_SHIFT) | PIM_CROSS_PAGE; // q(vpn << PAGE_SIZE)
-                vpn++;
-            }
-            pthis(idx - 1) &= ~PIM_CROSS_PAGE;
-        }
-    }
     
+    if constexpr (n_pim_meta_ptr == 2) {
+        vend &= ~PAGE_MASK;
+        if ((vthis & ~PAGE_MASK) == vend) {
+            pthis(0) = pm.query_and_lock(vthis);
+            pthis(1) = PIM_META_END;
+        } else {
+            pthis(0) = pm.query_and_lock(vthis) | PIM_CROSS_PAGE;
+            pthis(1) = pm.query_and_lock(vend) | PIM_META_END;
+        }
+    } else {
+        psize_t idx = 0, expage = (vend >> PAGE_SHIFT) - (vthis >> PAGE_SHIFT);
+        pthis(n_est_meta_ptr - 1) = 0;
+        while (idx < expage) {
+            pthis(idx++) = pm.query_and_lock(vthis) | PIM_CROSS_PAGE;
+            vthis = ((vthis >> PAGE_SHIFT) + 1) << PAGE_SHIFT;  
+        }
+        pthis(idx++) = pm.query_and_lock(vthis);
+        pthis(n_est_meta_ptr - 1) |= PIM_META_END;
+    }
+
     pnext() = 0;
     vnext() = 0;
     

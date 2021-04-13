@@ -29,6 +29,7 @@
         "sstream": "cpp",
         "cerrno": "cpp",
         "istream": "cpp",
-        "streambuf": "cpp"
+        "streambuf": "cpp",
+        "cassert": "cpp"
     }
 }

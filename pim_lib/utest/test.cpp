@@ -207,6 +207,7 @@ TEST(PimListNodeTests, ConstructorDestructor) {
     ASSERT_EQ(m1->pnext(), 0);
     ASSERT_EQ(m1->vnext(), 0);
     ASSERT_EQ(m1->pthis(0), va2pa_offset + malloc_start_addr + PAGE_SIZE / 2);
+    ASSERT_EQ(m1->pthis(1), 0 | PIM_META_END);
     ASSERT_EQ(map.size(), 1);
     ASSERT_TRUE(map.find(malloc_start_addr) != map.end());
     ASSERT_EQ(map[malloc_start_addr], pc_pair(va2pa_offset + malloc_start_addr, 1));
@@ -215,7 +216,7 @@ TEST(PimListNodeTests, ConstructorDestructor) {
     ASSERT_EQ(m2->pnext(), 0);
     ASSERT_EQ(m2->vnext(), 0);
     ASSERT_EQ(m2->pthis(0), (va2pa_offset + malloc_start_addr + PAGE_SIZE - extra * PTR_SIZE) | PIM_CROSS_PAGE);
-    ASSERT_EQ(m2->pthis(1), va2pa_offset + malloc_start_addr + PAGE_SIZE);
+    ASSERT_EQ(m2->pthis(1), (va2pa_offset + malloc_start_addr + PAGE_SIZE) | PIM_META_END);
     ASSERT_EQ(map.size(), 2);
     ASSERT_TRUE(map.find(malloc_start_addr) != map.end());
     ASSERT_TRUE(map.find(malloc_start_addr + PAGE_SIZE) != map.end());
@@ -228,7 +229,7 @@ TEST(PimListNodeTests, ConstructorDestructor) {
     ASSERT_EQ(m3->vnext(), 0);
     ASSERT_EQ(m3->pthis(0), (va2pa_offset + malloc_start_addr + 2 * PAGE_SIZE - extra * PTR_SIZE) | PIM_CROSS_PAGE);
     ASSERT_EQ(m3->pthis(1), (va2pa_offset + malloc_start_addr + 2 * PAGE_SIZE) | PIM_CROSS_PAGE);
-    ASSERT_EQ(m3->pthis(2), va2pa_offset + malloc_start_addr + 3 * PAGE_SIZE);
+    ASSERT_EQ(m3->pthis(2), (va2pa_offset + malloc_start_addr + 3 * PAGE_SIZE) | PIM_META_END);
     ASSERT_EQ(map.size(), 4);
     ASSERT_TRUE(map.find(malloc_start_addr) != map.end());
     ASSERT_TRUE(map.find(malloc_start_addr + PAGE_SIZE) != map.end());
