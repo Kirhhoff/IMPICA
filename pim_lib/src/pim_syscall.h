@@ -15,7 +15,9 @@ private:
 
 public:
     static const PimThreadContext ctx;
+    
     int ptable_fd;
+    char* pim_reg;
 };
 
 void* pim_malloc(psize_t size, system_tag tag);

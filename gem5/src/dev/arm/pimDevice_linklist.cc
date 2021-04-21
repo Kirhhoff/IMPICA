@@ -518,10 +518,26 @@ read_node_loop:
         size = tsize;
 
 read_node_part_loop:
+#ifndef N_PIM_DEBUG
+		printf(	"[LOG:] PIM state:\n"
+				"\tcur.vthis = [0x%lx]\n"
+				"\tT.size = [0x%lx]\n"
+				"\tsize = [0x%lx]\n"
+				"\theader.read_finished = [%d]\n"
+				"\theader.cnt = [0x%lx]\n"
+				"\theader.thismeta.idx = [0x%lx]\n",
+				cur_vthis, tsize, size,
+				header_read_finished, header_cnt, header_read_pos);
+#endif
+
 		readlen = min(size, PAGE_SIZE - (pread & PAGE_MASK));
 
-        printf("target readlen = %ld\n", readlen);
-        printf("target read addr = %p\n", reinterpret_cast<void*>(pread));
+#ifndef N_PIM_DEBUG
+		printf(	"[LOG:] PIM read operation:\n"
+				"\tread.addr = [0x%lx]\n"
+				"\tread.len = [0x%lx]\n",
+				pread, readlen);
+#endif
 
 		event = getFreeDmaDoneEvent();
 		event->setEventTrigger(FetchNode, 0);
@@ -532,14 +548,15 @@ read_node_part_loop:
 		break;
 
 	case 2:
-        for (int i = 0; i < 12; i++) {
-            printf("cbuff[%d] = 0x%lx\n", i, cbuff[i]);
-        }
+#ifndef N_PIM_DEBUG
+		printf("[LOG:] after read operation, node buff contents:\n");
+		for (int i = 0; i < 12; i++) {
+            printf("\t[%d] = [0x%lx]\n", i, cbuff[i]);
+		}
+#endif
 
 		end_pos += readlen / PTR_SIZE;
 		size -= readlen;
-
-        printf("totoal %ld\n", tsize);
 
 		if (!header_read_finished) {
 			while (header_cnt < end_pos && (cbuff[header_cnt] & PIM_META_END) == 0) {
@@ -570,8 +587,6 @@ read_node_part_loop:
 move_to_next_part:
 		pread = cbuff[header_read_pos++] & ~(PIM_CROSS_PAGE | PIM_META_END);
 
-        printf("pread %p\n", reinterpret_cast<void*>(pread));
-
 		if (size > 0)
 			goto read_node_part_loop;
 
@@ -579,12 +594,10 @@ move_to_next_part:
 			vthis = cur_vthis;
 			done = true;
 			return;
-			// return vthis;
         }
 
 move_to_next:
             pthis = cbuff[header_cnt];
-            // vthis = cbuff[header_cnt + 1];
 			cur_vthis = cbuff[header_cnt + 1];
 			printf("move to next p = 0x%lx, v = 0x%lx\n", pthis, cur_vthis);
 		goto read_node_loop;

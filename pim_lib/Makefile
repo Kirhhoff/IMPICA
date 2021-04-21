@@ -17,6 +17,7 @@ test-dir := test
 pim-lib-hpps := $(shell ls ${src-dir}/*.hpp)
 pim-lib-targets := $(basename $(notdir $(shell ls ${src-dir}/*.cpp)))
 pim-lib-objs := $(addprefix ${obj-dir}/${src-dir}/, $(addsuffix .o, ${pim-lib-targets}))
+pim-lib-archive := libpim.a
 
 pim-x86-lib-objs := $(addprefix ${obj-dir}/${x86-src-dir}/, $(addsuffix .o, ${pim-lib-targets}))
 pim-utest-includes := $(shell ls ${utest-dir}/*.h)
@@ -29,11 +30,14 @@ pim-test-targets := $(basename $(notdir $(shell ls ${test-dir}/*.cpp)))
 pim-test-bin := $(addprefix ${bin-dir}/${test-dir}/, ${pim-test-targets}) 
 pim-test-objs := $(addprefix ${obj-dir}/${test-dir}/, $(addsuffix .o, ${pim-test-targets}))
 
-build: $(pim-lib-objs)
+build: $(pim-lib-archive)
 
 install:
 	rm -rf ${dest-dir} 
 	cp -r . ${dest-dir}
+
+${pim-lib-archive}: ${pim-lib-objs}
+	ar -crv $@ $^
 
 ${pim-lib-objs}: | ${obj-dir}/${src-dir}
 
@@ -57,9 +61,9 @@ test: ${pim-test-objs}
 
 ${pim-test-objs}: | ${bin-dir}/${test-dir} ${obj-dir}/${test-dir}
 
-${obj-dir}/${test-dir}/%.o: ${test-dir}/%.cpp ${pim-test-includes} ${pim-lib-objs} 
+${obj-dir}/${test-dir}/%.o: ${test-dir}/%.cpp ${pim-test-includes} ${pim-lib-archive} 
 	${CC} ${CC_FLAGS} ${LIB_FLAGS} -c $< -o $@ -I${src-dir}
-	${CC} ${CC_FLAGS} ${LIB_FLAGS} -o ${bin-dir}/${test-dir}/$(basename $(notdir $@)) $@ ${pim-lib-objs}
+	${CC} ${CC_FLAGS} ${LIB_FLAGS} -o ${bin-dir}/${test-dir}/$(basename $(notdir $@)) $@ -static ${pim-lib-archive}
 
 # ------------------------------------------------------------
 ${obj-dir}/%: | ${obj-dir}
@@ -75,5 +79,4 @@ ${bin-dir}:
 	mkdir $@
 
 clean: 
-	rm -rf ${obj-dir}
-	rm -rf ${bin-dir}
+	rm -rf ${obj-dir} ${bin-dir} ${pim-lib-archive}

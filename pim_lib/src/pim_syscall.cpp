@@ -13,6 +13,7 @@ PimThreadContext::PimThreadContext() {
     pid_t pid;
     char filename[64];
     error_t err;
+    int pim_fd;
 
     pid = getpid();
     if (pid < 0) {
@@ -30,6 +31,20 @@ PimThreadContext::PimThreadContext() {
     if (ptable_fd < 0) {
         printf("Fail to open page table file: %s\n", strerror(ptable_fd));
         return;
+    }
+
+    pim_fd = open("/dev/pimbt", O_RDWR);
+    
+    if (pim_fd < 0) {
+        printf("Fail to open pim device.\n");
+    } 
+
+    pim_reg = (char *)mmap(0, 0x1000,
+        PROT_READ | PROT_WRITE,
+        MAP_SHARED,
+        pim_fd, 0);    
+    if (pim_reg == PIM_MAP_FAILED) {
+        printf("Fail to map pim registers.\n");
     }
 }
 
