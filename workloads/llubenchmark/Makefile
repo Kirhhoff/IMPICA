@@ -1,5 +1,5 @@
-CC=g++
-CFLAGS=-Wall -g -std=c++0x
+CC=aarch64-linux-gnu-g++
+CFLAGS=-Wall -g -std=c++11
 
 .SUFFIXES: .o .c .h
 
@@ -13,9 +13,17 @@ LDFLAGS += $(CFLAGS)
 CPPS = $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)*.c)) 
 ASMS = $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)*.S)) 
 
-OBJS = $(addprefix obj/, $(notdir $(CPPS:.c=.o))) $(addprefix obj/, $(notdir $(ASMS:.S=.o))) 
+obj-dir := obj
+OBJS = $(addprefix ${obj-dir}/, $(notdir $(CPPS:.c=.o))) $(addprefix ${obj-dir}/, $(notdir $(ASMS:.S=.o))) 
+workload-bin := llubenchmark
 
-all:llubenchmark
+dest-dir := ${mroot}/workloads
+
+build: ${workload-bin}
+
+install:
+	rm -rf ${dest-dir}
+	cp -r . ${dest-dir}	
 
 .PHONY: deps
 deps:$(CPPS) $(ASMS) 
@@ -24,14 +32,19 @@ deps:$(CPPS) $(ASMS)
 	mv obj/deps.tmp obj/deps
 -include obj/deps
 
-llubenchmark : $(OBJS)
+${workload-bin}: $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
-./obj/%.o: %.c
+	
+${obj-dir}:
+	mkdir ${obj-dir}
+
+${obj-dir}/%.o: %.c | ${obj-dir}
 	$(CC) -c $(CFLAGS) $(INCLUDE) -o $@ $<
-./obj/%.o: %.S
+
+${obj-dir}/%.o: %.S | ${obj-dir}
 	$(CC) -c $(CFLAGS) $(INCLUDE) -o $@ $<
 
 
 .PHONY: clean
 clean:
-	rm -f obj/*.o obj/.depend llubenchmark
+	rm -rf ${obj-dir} ${workload-bin}

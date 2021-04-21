@@ -2,11 +2,24 @@ kern-dir := linux-aarch64-gem5-20140821
 kern-bin := ${kern-dir}/vmlinux
 kern-img := $(M5_PATH)/binaries/vmlinux
 
+disk-img := $(M5_PATH)/disks/aarch64-ubuntu-trusty-headless.img
+mnt-dir := /mnt
+
+export mroot := ${mnt-dir}/home
 export driver-dir := $(PWD)/pim_driver
 
 run: ${kern-img}
 	make -C pim_driver build
+	make -C pim_lib build
 	make -C pim_lib test
+	make -C workloads/llubenchmark build
+
+	mount -o loop,offset=32256 ${disk-img} ${mnt-dir}
+	make -C pim_driver install 
+	make -C pim_lib install
+	make -C workloads/llubenchmark install
+	umount ${mnt-dir}
+
 	make -C gem5 run
 
 ${kern-img}:
@@ -21,6 +34,7 @@ connect:
 clean:
 	make -C pim_driver clean
 	make -C pim_lib clean
+	make -C workloads/llubenchmark clean
 	make -C gem5/util/term clean
 
 clean-gem5:

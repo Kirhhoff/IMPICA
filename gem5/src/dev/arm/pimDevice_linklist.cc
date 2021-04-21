@@ -214,7 +214,8 @@ Tick PimDevice::read(PacketPtr pkt)
 		data = startTrav[ch];
 		break;
 	case Done:
-		data = doneTrav[ch];
+		data = done;
+		// data = doneTrav[ch];
 		break;
 	case ItemLo:
 		data = item[ch];
@@ -240,7 +241,18 @@ Tick PimDevice::read(PacketPtr pkt)
 #endif
 
 		break;
-
+	case Pthis:
+		data = pthis;
+		break;
+	case Ptarget:
+		data = ptarget;
+		break;
+	case Vthis:
+		data = vthis;
+		break;
+	case Tsize:
+		data = tsize;
+		break;
 	default:
 		warn("Read to unsupported registers for PIM BT\n");
 	    break;
@@ -361,6 +373,20 @@ Tick PimDevice::write(PacketPtr pkt)
 #endif
 		
 		break;
+	case Pthis:
+		pthis = data;
+		break;
+	case Ptarget:
+		ptarget = data;
+		break;
+	case Vthis:
+		vthis = data;
+		break;
+	case Tsize:
+		done = false;
+		tsize = data;
+		start_find(0);
+		break;
 	default:
 		warn("Write to unsupported registers for PIM BT\n");
 	    break;
@@ -369,6 +395,208 @@ Tick PimDevice::write(PacketPtr pkt)
 	pkt->makeAtomicResponse();
 
 	return pioDelay;
+}
+
+// #define N_PIM_DEBUG
+
+void PimDevice::start_find(uint64_t state) {
+	DmaDoneEvent* event;
+	
+	switch (state)
+	{
+	case 0:
+#ifndef N_PIM_DEBUG
+		printf(	"[LOG:] PIM find starts:\n"
+				"\tbegin.pa = [0x%lx]\n"
+				"\ttarget.pa = [0x%lx]\n"
+				"\tbegin.va = [0x%lx]\n"
+				"\tT.size = [0x%lx]\n",
+				pthis, ptarget, vthis, tsize);
+#endif
+
+		cur_vthis = vthis;
+		tsize += 3 * PTR_SIZE;
+		ext = 0;
+		end_pos = 0;
+		header_cnt = 0;
+		header_read_finished = false;
+		header_read_pos = 0;
+		pread = ptarget & ~PIM_CROSS_PAGE;
+		size = tsize;
+		
+read_target_loop:
+#ifndef N_PIM_DEBUG
+		printf(	"[LOG:] PIM state:\n"
+				"\tcur.vthis = [0x%lx]\n"
+				"\tT.size = [0x%lx]\n"
+				"\tsize = [0x%lx]\n"
+				"\theader.read_finished = [%d]\n"
+				"\theader.cnt = [0x%lx]\n"
+				"\theader.thismeta.idx = [0x%lx]\n",
+				cur_vthis, tsize, size,
+				header_read_finished, header_cnt, header_read_pos);
+#endif
+
+		readlen = min(size, PAGE_SIZE - (pread & PAGE_MASK));
+
+#ifndef N_PIM_DEBUG
+		printf(	"[LOG:] PIM read operation:\n"
+				"\tread.addr = [0x%lx]\n"
+				"\tread.len = [0x%lx]\n",
+				pread, readlen);
+#endif
+
+		event = getFreeDmaDoneEvent();
+		event->setEventTrigger(FetchTarget, 0);
+		dmaPort.dmaAction(MemCmd::ReadReq, pread,
+							readlen, event, 
+							(uint8_t*)&buff[end_pos],
+							50, Request::PIM_ACCESS);
+		break;
+
+	case 1:
+#ifndef N_PIM_DEBUG
+		printf("[LOG:] after read operation, target buff contents:\n");
+		for (int i = 0; i < 12; i++) {
+            printf("\t[%d] = [0x%lx]\n", i, buff[i]);
+		}
+#endif
+
+		end_pos += readlen / PTR_SIZE;
+		size -= readlen;
+		
+		if (!header_read_finished) {
+            while (header_cnt < end_pos && (buff[header_cnt] & PIM_META_END) == 0) {
+                header_cnt++;
+                ext += PTR_SIZE;
+            }
+
+            printf("header cnt = [%ld] end pos = [%ld] size left = [%ld]\n", header_cnt, end_pos, size);
+            
+            if (header_cnt < end_pos) {
+                header_cnt++;
+                ext += PTR_SIZE;   
+                header_read_finished = true;
+                
+				if (size == 0) {
+                    size = ext;
+                    tsize += ext;
+                    pread += readlen;
+                    goto read_target_loop;
+                }
+            }
+            size += ext;
+            tsize += ext;
+            ext = 0; 
+        }
+
+        pread = buff[header_read_pos++] & ~(PIM_CROSS_PAGE | PIM_META_END);
+
+		if (size > 0) {
+			goto read_target_loop;
+		}
+
+read_node_loop:
+#ifndef N_PIM_DEBUG
+		printf(	"[LOG:] PIM read node starts:\n"
+				"\tbegin.pa = [0x%lx]\n"
+				"\ttarget.pa = [0x%lx]\n"
+				"\tbegin.va = [0x%lx]\n"
+				"\tT.size = [0x%lx]\n",
+				pthis, ptarget, cur_vthis, tsize);
+#endif
+
+		if (pthis == 0) {
+			goto not_found;
+		}
+		
+		end_pos = 0;
+        header_cnt = 0;
+        header_read_finished = false;
+        header_read_pos = 0;
+        pread = pthis & ~PIM_CROSS_PAGE;
+        size = tsize;
+
+read_node_part_loop:
+		readlen = min(size, PAGE_SIZE - (pread & PAGE_MASK));
+
+        printf("target readlen = %ld\n", readlen);
+        printf("target read addr = %p\n", reinterpret_cast<void*>(pread));
+
+		event = getFreeDmaDoneEvent();
+		event->setEventTrigger(FetchNode, 0);
+		dmaPort.dmaAction(MemCmd::ReadReq, pread,
+							readlen, event, 
+							(uint8_t*)&cbuff[end_pos],
+							50, Request::PIM_ACCESS);
+		break;
+
+	case 2:
+        for (int i = 0; i < 12; i++) {
+            printf("cbuff[%d] = 0x%lx\n", i, cbuff[i]);
+        }
+
+		end_pos += readlen / PTR_SIZE;
+		size -= readlen;
+
+        printf("totoal %ld\n", tsize);
+
+		if (!header_read_finished) {
+			while (header_cnt < end_pos && (cbuff[header_cnt] & PIM_META_END) == 0) {
+				header_cnt++;
+			}
+
+            printf("header cnt = [%ld] end pos = [%ld] size left = [%ld]\n", header_cnt, end_pos, size);
+
+			if (header_cnt < end_pos) {
+				printf("header read finished\n");
+				header_cnt++;
+				header_read_finished = true;
+				cmp_pos = header_cnt + 3;
+				if (cmp_pos >= end_pos) {
+					goto move_to_next_part;
+				}
+			} else {
+				goto move_to_next_part;
+			}
+		}
+
+		if (memcmp(&cbuff[cmp_pos], &buff[cmp_pos], (end_pos - cmp_pos) * PTR_SIZE) != 0) {
+			goto move_to_next;
+		}
+
+		cmp_pos = end_pos;
+
+move_to_next_part:
+		pread = cbuff[header_read_pos++] & ~(PIM_CROSS_PAGE | PIM_META_END);
+
+        printf("pread %p\n", reinterpret_cast<void*>(pread));
+
+		if (size > 0)
+			goto read_node_part_loop;
+
+        if (cmp_pos == end_pos) {
+			vthis = cur_vthis;
+			done = true;
+			return;
+			// return vthis;
+        }
+
+move_to_next:
+            pthis = cbuff[header_cnt];
+            // vthis = cbuff[header_cnt + 1];
+			cur_vthis = cbuff[header_cnt + 1];
+			printf("move to next p = 0x%lx, v = 0x%lx\n", pthis, cur_vthis);
+		goto read_node_loop;
+	default:
+		break;
+	}
+
+	return;
+
+not_found:
+	vthis = 0;
+	done = true;
 }
 
 // 	start B-tree traversal
@@ -842,6 +1070,9 @@ void PimDevice::dmaDone(uint64_t eventTrigger, uint64_t ch)
 		//isPageTableFetched = true;
 		grabSecondPageTable();
 		break;
+	case FetchTarget:
+	case FetchNode:
+		start_find(eventTrigger - FetchBase);
 	default:
 		//		assert(0);
 	    break;

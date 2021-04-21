@@ -276,7 +276,7 @@ long device_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl
 		baseaddr = BASE_PIM_DEV + (buf[2] << 8);
 
 		pgd = virt_to_phys(current->mm->pgd);
-
+		printk("device ioctl works for Traverse.\n");
 		outl((unsigned int)buf[0], baseaddr + RootAddrLo);
 		outl((unsigned int)(buf[0] >> 32), baseaddr + RootAddrHi);
 
@@ -294,6 +294,7 @@ long device_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl
 
 	case IOCTL_POLL_DONE:
 
+		printk("device ioctl works for Poll Done.\n");
 		buf = (unsigned long *)ioctl_param;
 
 		get_user(baseaddr, buf);

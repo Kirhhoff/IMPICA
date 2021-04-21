@@ -3,9 +3,7 @@ obj-m += test-driver.o
 #obj-m += test_morteza.o
 CROSS_COMPILE := aarch64-linux-gnu-
 
-img := $(M5_PATH)/disks/aarch64-ubuntu-trusty-headless.img
-mroot := /mnt
-dest-dir := ${mroot}/home/pim_driver
+dest-dir := ${mroot}/pim_driver
 
 obj-dir := obj
 
@@ -23,10 +21,10 @@ ${pim-driver-obj}: ${pim-driver-sources} | ${obj-dir}
 	mv ${pim-driver-generated} ${obj-dir}
 	rm -rf ${obj-dir}/.tmp_versions
 	mv .tmp_versions ${obj-dir}
-	mount -o loop,offset=32256 ${img} ${mroot}
+
+install:
 	rm -rf ${dest-dir}
 	cp -r . ${dest-dir}
-	umount ${mroot}
 
 ${obj-dir}:
 	mkdir $@

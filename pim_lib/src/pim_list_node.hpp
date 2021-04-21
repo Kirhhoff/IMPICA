@@ -4,10 +4,22 @@
 #include <new>
 #include "default_page_manager.hpp"
 
+template<typename T, class syscall_type, class page_manager_impl>
+class pim_list_node;
+
+template<typename T, class syscall_type, class page_manager_impl>
+pim_list_node<T, syscall_type, page_manager_impl>* 
+pim_find(pim_list_node<T, syscall_type, page_manager_impl>* begin, T& val);
+
 template<typename T,
     class syscall_type = system_syscall,
     class page_manager_impl = default_page_manager<syscall_type>>
 class pim_list_node {
+
+// template<typename T, class syscall_type, class page_manager_impl>
+friend pim_list_node* pim_find<T, syscall_type, page_manager_impl>(pim_list_node* begin, T& val);
+    
+
 protected:
     static constexpr psize_t T_size = sizeof(T);
     static constexpr psize_t chunk_size = sizeof(chunk_t);
@@ -96,7 +108,8 @@ pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(Args&&... args)
     ptr_t vthis = reinterpret_cast<ptr_t>(mem);
     ptr_t vend = vthis + pim_size - chunk_size;
     
-    if constexpr (n_pim_meta_ptr == 2) {
+    // if constexpr (n_pim_meta_ptr == 2) {
+    if (n_pim_meta_ptr == 2) {
         vend &= ~PAGE_MASK;
         if ((vthis & ~PAGE_MASK) == vend) {
             pthis(0) = pm.query_and_lock(vthis);

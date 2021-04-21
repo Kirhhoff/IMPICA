@@ -1,5 +1,5 @@
 gem5-cli := ./build/ARM/gem5.opt
-pim-device := btree
+pim-device := link_list
 
 ${gem5-cli}:
 	scons -j17 PIM_DEVICE=${pim-device} build/ARM/gem5.opt

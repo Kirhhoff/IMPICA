@@ -304,10 +304,10 @@ main(int argc, char *argv[]) {
 		}
 	 }
   }
-
+	printf("finished\n");
 #if defined(GEM5)
 	m5_dump_stats(0, 0);
-	m5_exit(0);
+	// m5_exit(0);
 #endif	
 
 	//printf ("num allocated %d\n", num_allocated);

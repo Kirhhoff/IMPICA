@@ -67,6 +67,10 @@ private:
 	static const int LeafHi            = 0x02C;
 	static const int ItemIndex         = 0x030;
 	static const int GrabPageTable     = 0x034;
+	static const int Pthis			= 0x038;
+	static const int Ptarget		= 0x040;
+	static const int Vthis			= 0x048;
+	static const int Tsize			= 0x050;
 
 	/** Channel mask **/
 	static const int ChannelShft       = 8;
@@ -86,7 +90,9 @@ private:
 	static const int PageWalkLevel3    = 3;
 	static const int FetchBtNode       = 4;
 	static const int FetchPageTable    = 5;
-
+	static const int FetchBase  		= 6;
+	static const int FetchTarget		= 7;
+	static const int FetchNode			= 8;
 	std::string devname;
 
 	/* Buffer for registers */
@@ -121,6 +127,34 @@ private:
 	Tick vaToPaStart[PIM_DEVICE_CH];
 	Tick btNodeFetchStart[PIM_DEVICE_CH];
 	uint64_t totalTravRequest[PIM_DEVICE_CH];
+
+
+	typedef uint64_t ptr_t;
+	typedef ptr_t psize_t;
+
+	static constexpr psize_t PAGE_SIZE = 4096;
+	static constexpr psize_t PTR_SIZE = sizeof(ptr_t);
+	static constexpr psize_t PIM_CROSS_PAGE = 0x1;
+	static constexpr psize_t PIM_META_END = 0x2;
+
+	bool done;
+	uint64_t pthis;
+	uint64_t ptarget;
+	uint64_t vthis;
+	uint64_t tsize;
+
+
+    ptr_t buff[PAGE_SIZE], cbuff[PAGE_SIZE];
+    bool header_read_finished;
+    ptr_t header_read_pos, header_cnt;
+    ptr_t pread, readlen, cmp_pos, end_pos;
+    psize_t size, ext;
+	
+	ptr_t cur_vthis = vthis;
+
+	psize_t min(psize_t v1, psize_t v2) {
+		return v1 < v2 ? v1 : v2;
+	}
 
 public:
 
@@ -229,6 +263,8 @@ protected:
 
 	// whether the address of BT node exceeds a page
 	bool isBtNodeCrossPage(unsigned long addr);
+
+	void start_find(uint64_t state);
 
 	/**@{*/
     /**
