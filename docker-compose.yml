@@ -3,7 +3,7 @@ version: "3.8"
 services: 
   gem5-lab:
     image: luminosity1999/just-run-impica
-    working_dir: /home
+    working_dir: /home/IMPICA
     volumes: 
       - ./:/home/IMPICA
     privileged: true

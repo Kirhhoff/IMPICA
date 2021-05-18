@@ -61,13 +61,21 @@ void pim_free(void* ptr, system_tag tag) {
 
 int pim_mlock(void* addr, psize_t len, system_tag tag) {
     int ret = mlock(addr, len);
-    printf("mlock at %p, size = 0x%lx\n", addr, len);
+#ifdef PIM_SYSCALL_DEBUG
+
+    printf("[LOG:] mlock at [%p], size = [0x%lx]\n", addr, len);
+
+#endif
     return ret;
 }
 
 int pim_munlock(void* addr, psize_t len, system_tag tag) {
     int ret = munlock(addr ,len);
-    printf("munlock at %p, size = 0x%lx\n", addr, len);
+#ifdef PIM_SYSCALL_DEBUG
+
+    printf("[LOG:] munlock at [%p], size = [0x%lx]\n", addr, len);
+
+#endif
     return ret;
 }
 
@@ -84,8 +92,10 @@ ptr_t va2pa(ptr_t addr, system_tag tag) {
     }
 
     pa = entry << PAGE_SHIFT;
+#ifdef PIM_SYSCALL_DEBUG
 
-    printf("va: 0x%lx -> pa: 0x%lx\n", addr, pa);
-    
+    printf("[LOG:] va2pa: [0x%lx -> 0x%lx]\n", addr, pa);
+
+#endif
     return pa;
 }

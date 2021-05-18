@@ -9,15 +9,14 @@ class pim_list_node;
 
 template<typename T, class syscall_type, class page_manager_impl>
 pim_list_node<T, syscall_type, page_manager_impl>* 
-pim_find(pim_list_node<T, syscall_type, page_manager_impl>* begin, T& val);
+pim_find(pim_list_node<T, syscall_type, page_manager_impl>* begin, const T& val);
 
 template<typename T,
     class syscall_type = system_syscall,
     class page_manager_impl = default_page_manager<syscall_type>>
 class pim_list_node {
 
-// template<typename T, class syscall_type, class page_manager_impl>
-friend pim_list_node* pim_find<T, syscall_type, page_manager_impl>(pim_list_node* begin, T& val);
+    friend pim_list_node* pim_find<T, syscall_type, page_manager_impl>(pim_list_node* begin, const T& val);
     
 
 protected:
@@ -79,8 +78,12 @@ public:
 
     template<class E, class Esyscall_type, class Epage_manager_impl>
     void next(pim_list_node<E, Esyscall_type, Epage_manager_impl>* __next){
-        pnext() = reinterpret_cast<ptr_t>(__next->pthis(0));
-        vnext() = reinterpret_cast<ptr_t>(__next);
+        if (__next != nullptr) {
+            pnext() = reinterpret_cast<ptr_t>(__next->pthis(0));
+            vnext() = reinterpret_cast<ptr_t>(__next);
+        } else {
+            clear_next();
+        }
     }
 
     void clear_next() {
@@ -108,7 +111,7 @@ pim_list_node<T, syscall_type, page_manager_impl>::pim_list_node(Args&&... args)
     ptr_t vthis = reinterpret_cast<ptr_t>(mem);
     ptr_t vend = vthis + pim_size - chunk_size;
     
-    // if constexpr (n_pim_meta_ptr == 2) {
+    // TODO: constexpr (n_pim_meta_ptr == 2)
     if (n_pim_meta_ptr == 2) {
         vend &= ~PAGE_MASK;
         if ((vthis & ~PAGE_MASK) == vend) {

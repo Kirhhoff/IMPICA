@@ -20,7 +20,7 @@ inline unsigned int ioread32(void* addr) {
 
 template<typename T, class syscall_type, class page_manager_impl>
 pim_list_node<T, syscall_type, page_manager_impl>* 
-pim_find(pim_list_node<T, syscall_type, page_manager_impl>* begin, T& val) {
+pim_find(pim_list_node<T, syscall_type, page_manager_impl>* begin,const T& val) {
     using node_t = pim_list_node<T, syscall_type, page_manager_impl>;
     
     auto& pim_reg = PimThreadContext::ctx.pim_reg;
@@ -31,7 +31,11 @@ pim_find(pim_list_node<T, syscall_type, page_manager_impl>* begin, T& val) {
     iowrite64(&pim_reg[Vthis], reinterpret_cast<unsigned long>(begin));
     iowrite64(&pim_reg[Tsize], node_t::T_size);
 
-    while (1 != ioread32(&pim_reg[Done]));
+    int cnt = 0;
+    while (1 != ioread32(&pim_reg[Done])) 
+        cnt++;
+    
+    printf("[LOG:] pim_find poll cnt: %d\n", cnt);
     
     return reinterpret_cast<node_t*>(ioread64(&pim_reg[Vthis]));
 }
